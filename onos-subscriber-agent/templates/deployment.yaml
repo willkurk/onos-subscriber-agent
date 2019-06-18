@@ -1,0 +1,45 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: {{ template "onos-subscriber-agent.fullname" . }}
+  labels:
+    app: {{ template "onos-subscriber-agent.name" . }}
+    chart: {{ template "onos-subscriber-agent.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "onos-subscriber-agent.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "onos-subscriber-agent.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/app"]
+          args: ["-kafka-brokers={{ .Values.kafka.brokers}}",
+          "-kafka-topic={{ .Values.kafka.topic }}",
+          "-onos-address={{ .Values.onos.address }}",
+          "-onos-user={{ .Values.onos.user }}",
+          "-onos-password={{ .Values.onos.password }}"] 
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
