@@ -33,35 +33,65 @@ type AuthEvent struct {
 	AuthenticationState string
 }
 
+func provisionSubscriber(authEvent AuthEvent) {
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", "http://"+onosUrl+"/onos/olt/oltapp/"+authEvent.DeviceId+"/"+authEvent.PortNumber, nil)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	req.SetBasicAuth(onosUsername, onosPassword)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("res.StatusCode: %d\n", resp.StatusCode)
+		log.Panic(err)
+	}
+	fmt.Printf("res.StatusCode: %d\n", resp.StatusCode)
+
+}
+
+func removeSubscriber(authEvent AuthEvent) {
+	client := &http.Client{}
+	req, err := http.NewRequest("DELETE", "http://"+onosUrl+"/onos/olt/oltapp/"+authEvent.DeviceId+"/"+authEvent.PortNumber, nil)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	req.SetBasicAuth(onosUsername, onosPassword)
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("res.StatusCode: %d\n", resp.StatusCode)
+		log.Panic(err)
+	}
+	fmt.Printf("res.StatusCode: %d\n", resp.StatusCode)
+
+}
+
 func processMessage(msg []byte) {
 
 	var authEvent AuthEvent
 	json.Unmarshal(msg, &authEvent)
-	fmt.Printf("Timestamp: %s, DeviceId: %s, PortNumber: %s, AuthenticationState: %s", authEvent.Timestamp, authEvent.DeviceId, authEvent.PortNumber, authEvent.AuthenticationState)
+	fmt.Printf("Timestamp: %s, DeviceId: %s, PortNumber: %s, AuthenticationState: %s \n", authEvent.Timestamp, authEvent.DeviceId, authEvent.PortNumber, authEvent.AuthenticationState)
 
 	//curl -v --user onos:rocks -X POST http://localhost:8181/onos/olt/oltapp/of%3A000000000a4001cd/16
 	if authEvent.AuthenticationState == "APPROVED" {
-		log.Printf("auth-approved-pushing-onos Device Id: %s, PortNumber: %s", authEvent.DeviceId, authEvent.PortNumber)
-		client := &http.Client{}
-		req, err := http.NewRequest("POST", "http://"+onosUrl+"/onos/olt/oltapp/"+authEvent.DeviceId+"/"+authEvent.PortNumber, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		req.SetBasicAuth(onosUsername, onosPassword)
-		resp, err := client.Do(req)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		defer resp.Body.Close()
-		_, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Printf("res.StatusCode: %d\n", resp.StatusCode)
-			log.Fatal(err)
-		}
-		fmt.Printf("res.StatusCode: %d\n", resp.StatusCode)
-
+		log.Printf("auth-approved-pushing-onos Device Id: %s, PortNumber: %s \n", authEvent.DeviceId, authEvent.PortNumber)
+		provisionSubscriber(authEvent)
+	} else if authEvent.AuthenticationState == "DENIED" {
+		log.Printf("auth-denied-deleting-subscriber Device Id: %s, PortNumber: %s \n", authEvent.DeviceId, authEvent.PortNumber)
+		removeSubscriber(authEvent)
 	}
 }
 
